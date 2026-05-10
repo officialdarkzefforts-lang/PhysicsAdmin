@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Physics Hub – Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ===================== FIREBASE CONFIG =====================
+  // Use the SAME config as user_panel.html
+  const firebaseConfig = {
+  apiKey: "AIzaSyB0uTikH-zIrbi0iqYi53y_bCiC2Ep9TNk",
+  authDomain: "physics-hub-7130e.firebaseapp.com",
+  projectId: "physics-hub-7130e",
+  storageBucket: "physics-hub-7130e.firebasestorage.app",
+  messagingSenderId: "472201847860",
+  appId: "1:472201847860:web:16f121458ead8f2f1fd661",
+  measurementId: "G-VEFVE6GLZ4"
+};
+
+  // ===================== ADMIN EMAIL =====================
+  // Set your admin email here (same one you set up in Firebase Auth)
+  window.ADMIN_EMAIL = "saadchennal222@gmail.com"; // <-- CHANGE THIS
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  window.__auth = auth;
+  window.__db = db;
+  window.__fns = { signInWithEmailAndPassword, onAuthStateChanged, signOut, collection, getDocs, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy };
+  window.__fbReady = true;
+  document.dispatchEvent(new Event('fb-ready'));
+</script>
+<style>
+:root{
+  --bg:#030712;--bg2:#0d1117;--card:#0f172a;--card2:#111827;
+  --border:#1e3a5f;--accent:#00d4ff;--accent2:#7c3aed;--accent3:#f59e0b;
+  --text:#e2e8f0;--muted:#64748b;--success:#10b981;--danger:#ef4444;--warn:#f59e0b;
+  --sidebar:240px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;overflow-x:hidden;}
+
+/* ===== LOGIN ===== */
+#loginPage{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(124,58,237,0.15) 0%,var(--bg) 70%);}
+.login-box{background:rgba(15,23,42,0.95);border:1px solid var(--border);border-radius:20px;padding:48px 40px;width:100%;max-width:420px;box-shadow:0 0 60px rgba(0,212,255,0.1),0 40px 80px rgba(0,0,0,0.6);animation:fadeIn 0.5s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.login-icon{text-align:center;font-size:52px;margin-bottom:12px;}
+.login-title{font-family:'Orbitron',sans-serif;text-align:center;font-size:20px;font-weight:900;color:var(--accent);letter-spacing:3px;margin-bottom:4px;}
+.login-sub{text-align:center;font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:32px;}
+.field label{display:block;font-size:12px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.field{margin-bottom:16px;}
+.field input{width:100%;padding:12px 16px;background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;transition:all 0.3s;}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,0.1);}
+.btn-login{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:10px;color:#fff;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:2px;margin-top:8px;transition:all 0.3s;}
+.btn-login:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,212,255,0.3);}
+.err-msg{background:rgba(239,68,68,0.1);border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:10px 14px;font-size:13px;margin-top:12px;display:none;}
+
+/* ===== ADMIN LAYOUT ===== */
+#adminPage{display:none;min-height:100vh;}
+#adminPage.show{display:flex;}
+
+.sidebar{width:var(--sidebar);background:rgba(9,14,27,0.98);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:50;transition:transform 0.3s;}
+.sidebar-head{padding:24px 20px;border-bottom:1px solid var(--border);}
+.sidebar-logo{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px;}
+.sidebar-sub{font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+.sidebar-nav{flex:1;padding:16px 0;overflow-y:auto;}
+.nav-section{padding:8px 16px 4px;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;transition:all 0.2s;color:var(--muted);font-size:14px;font-weight:600;letter-spacing:0.5px;border-left:3px solid transparent;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03);}
+.nav-item.active{color:var(--accent);background:rgba(0,212,255,0.06);border-left-color:var(--accent);}
+.nav-item .icon{font-size:18px;width:22px;text-align:center;}
+.sidebar-footer{padding:16px 20px;border-top:1px solid var(--border);}
+.admin-badge{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.admin-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+.admin-info{overflow:hidden;}
+.admin-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.admin-role{font-size:11px;color:var(--accent);letter-spacing:1px;}
+.btn-logout{width:100%;padding:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:var(--danger);cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;letter-spacing:1px;transition:all 0.3s;}
+.btn-logout:hover{background:rgba(239,68,68,0.2);}
+
+.main-content{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{height:60px;background:rgba(9,14,27,0.98);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:40;}
+.topbar-title{font-family:'Orbitron',sans-serif;font-size:15px;color:var(--accent);letter-spacing:2px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success);}
+.status-txt{font-size:12px;color:var(--muted);}
+.content-area{padding:28px;flex:1;}
+
+/* ===== PANELS ===== */
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* Stats cards */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:28px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative;overflow:hidden;transition:all 0.3s;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.stat-card.blue::before{background:linear-gradient(90deg,var(--accent),transparent);}
+.stat-card.purple::before{background:linear-gradient(90deg,var(--accent2),transparent);}
+.stat-card.amber::before{background:linear-gradient(90deg,var(--accent3),transparent);}
+.stat-card.green::before{background:linear-gradient(90deg,var(--success),transparent);}
+.stat-num{font-family:'Orbitron',sans-serif;font-size:32px;font-weight:900;margin-bottom:4px;}
+.stat-card.blue .stat-num{color:var(--accent);}
+.stat-card.purple .stat-num{color:#a78bfa;}
+.stat-card.amber .stat-num{color:var(--accent3);}
+.stat-card.green .stat-num{color:var(--success);}
+.stat-label{font-size:12px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+
+/* Section header */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+.sec-title{font-family:'Orbitron',sans-serif;font-size:15px;color:var(--accent);letter-spacing:2px;}
+.btn-add{padding:9px 20px;background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:8px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all 0.3s;display:flex;align-items:center;gap:6px;}
+.btn-add:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(0,212,255,0.3);}
+
+/* Table */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:24px;}
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{background:rgba(0,0,0,0.3);padding:12px 16px;text-align:left;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);}
+.data-table td{padding:12px 16px;border-bottom:1px solid rgba(30,58,95,0.4);font-size:14px;vertical-align:middle;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:rgba(0,212,255,0.02);}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-family:'Share Tech Mono',monospace;font-weight:600;}
+.badge.physics{background:rgba(0,212,255,0.1);color:var(--accent);border:1px solid rgba(0,212,255,0.2);}
+.badge.math{background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.2);}
+.badge.active{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.2);}
+.badge.blocked{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);}
+.btn-sm{padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;border:none;transition:all 0.2s;letter-spacing:0.5px;}
+.btn-sm.edit{background:rgba(0,212,255,0.1);color:var(--accent);border:1px solid rgba(0,212,255,0.2);}
+.btn-sm.edit:hover{background:rgba(0,212,255,0.2);}
+.btn-sm.del{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);}
+.btn-sm.del:hover{background:rgba(239,68,68,0.2);}
+.btn-sm.block{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);}
+.btn-sm.unblock{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.2);}
+.empty-row td{text-align:center;color:var(--muted);padding:32px!important;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:20px;width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,212,255,0.15),0 40px 80px rgba(0,0,0,0.8);animation:fadeIn 0.3s ease;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);}
+.modal-head h3{font-family:'Orbitron',sans-serif;font-size:15px;color:var(--accent);letter-spacing:2px;}
+.modal-close{background:transparent;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;transition:color 0.2s;}
+.modal-close:hover{color:var(--danger);}
+.modal-body{overflow-y:auto;padding:24px;flex:1;}
+.modal-body::-webkit-scrollbar{width:4px;}
+.modal-body::-webkit-scrollbar-thumb{background:var(--accent2);border-radius:2px;}
+.modal-foot{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:12px;justify-content:flex-end;}
+
+/* FORM */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.form-row.full{grid-template-columns:1fr;}
+.form-group label{display:block;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:14px;outline:none;transition:all 0.3s;}
+.form-group textarea{resize:vertical;min-height:80px;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,0.08);}
+.form-group select option{background:var(--card);}
+
+/* Dynamic list */
+.dyn-list{background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:8px;}
+.dyn-item{display:flex;gap:8px;margin-bottom:10px;align-items:flex-start;}
+.dyn-item input,.dyn-item textarea{flex:1;padding:8px 12px;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;}
+.dyn-item textarea{resize:vertical;min-height:60px;}
+.dyn-item .rm-btn{padding:7px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:6px;color:var(--danger);cursor:pointer;font-size:14px;flex-shrink:0;transition:all 0.2s;}
+.dyn-item .rm-btn:hover{background:rgba(239,68,68,0.2);}
+.add-row-btn{padding:7px 16px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:6px;color:var(--accent);cursor:pointer;font-size:12px;font-family:'Rajdhani',sans-serif;font-weight:600;letter-spacing:1px;transition:all 0.2s;margin-top:4px;}
+.add-row-btn:hover{background:rgba(0,212,255,0.15);}
+.section-label{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--accent3);letter-spacing:2px;text-transform:uppercase;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid rgba(245,158,11,0.2);}
+.btn-save{padding:10px 28px;background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:8px;color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all 0.3s;}
+.btn-save:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(0,212,255,0.3);}
+.btn-cancel{padding:10px 24px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:13px;cursor:pointer;transition:all 0.3s;letter-spacing:1px;}
+.btn-cancel:hover{border-color:var(--muted);color:var(--text);}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 20px;font-size:14px;font-weight:600;display:none;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,0.4);animation:fadeIn 0.3s ease;}
+.toast.show{display:block;}
+.toast.success{border-color:var(--success);color:var(--success);}
+.toast.error{border-color:var(--danger);color:var(--danger);}
+.toast.info{border-color:var(--accent);color:var(--accent);}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main-content{margin-left:0;}
+  .form-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginPage">
+  <div class="login-box">
+    <div class="login-icon">🛡️</div>
+    <div class="login-title">ADMIN ACCESS</div>
+    <div class="login-sub">Physics Hub Control Panel</div>
+    <div class="field">
+      <label>Admin Email</label>
+      <input type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="adminPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" onclick="doLogin()">ACCESS PANEL →</button>
+    <div class="err-msg" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ===== ADMIN LAYOUT ===== -->
+<div id="adminPage">
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-logo">⚛ PHYSICS HUB</div>
+      <div class="sidebar-sub">Admin Dashboard</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Dashboard</div>
+      <div class="nav-item active" onclick="showPanel('overview',this)"><span class="icon">📊</span>Overview</div>
+      <div class="nav-section">Content</div>
+      <div class="nav-item" onclick="showPanel('topics',this)"><span class="icon">📚</span>Manage Topics</div>
+      <div class="nav-item" onclick="showPanel('content',this)"><span class="icon">✏️</span>Topic Content</div>
+      <div class="nav-section">Users</div>
+      <div class="nav-item" onclick="showPanel('users',this)"><span class="icon">👥</span>User Management</div>
+      <div class="nav-section">Settings</div>
+      <div class="nav-item" onclick="showPanel('settings',this)"><span class="icon">⚙️</span>Settings</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="admin-badge">
+        <div class="admin-avatar">A</div>
+        <div class="admin-info">
+          <div class="admin-name" id="adminName">Admin</div>
+          <div class="admin-role">SUPER ADMIN</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">⏻ LOGOUT</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title" id="topbarTitle">OVERVIEW</div>
+      <div class="topbar-right">
+        <div class="status-dot"></div>
+        <span class="status-txt">Firebase Connected</span>
+      </div>
+    </div>
+    <div class="content-area">
+
+      <!-- OVERVIEW -->
+      <div class="panel active" id="panel-overview">
+        <div class="stats-grid">
+          <div class="stat-card blue"><div class="stat-num" id="ov-topics">—</div><div class="stat-label">Total Topics</div></div>
+          <div class="stat-card purple"><div class="stat-num" id="ov-users">—</div><div class="stat-label">Total Users</div></div>
+          <div class="stat-card green"><div class="stat-num" id="ov-active">—</div><div class="stat-label">Active Users</div></div>
+          <div class="stat-card amber"><div class="stat-num" id="ov-blocked">—</div><div class="stat-label">Blocked Users</div></div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Recent Users</th><th>Email</th><th>Joined</th><th>Status</th></tr></thead>
+            <tbody id="recentUsersTable"><tr class="empty-row"><td colspan="4">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TOPICS PANEL -->
+      <div class="panel" id="panel-topics">
+        <div class="sec-head">
+          <div class="sec-title">📚 MANAGE TOPICS</div>
+          <button class="btn-add" onclick="openTopicModal()">＋ ADD TOPIC</button>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+          <select id="topicSubjFilter" onchange="loadTopicsTable()" style="padding:8px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;cursor:pointer;">
+            <option value="all">All Subjects</option>
+            <option value="Physics">Physics</option>
+            <option value="Mathematics">Mathematics</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Icon</th><th>Topic Name</th><th>Subject</th><th>Defs</th><th>Formulas</th><th>Units</th><th>Numericals</th><th>Actions</th></tr></thead>
+            <tbody id="topicsTable"><tr class="empty-row"><td colspan="8">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CONTENT PANEL -->
+      <div class="panel" id="panel-content">
+        <div class="sec-head">
+          <div class="sec-title">✏️ TOPIC CONTENT</div>
+        </div>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">Select a topic below to add or edit its definitions, formulas, units, symbols, and numerical problems.</p>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Topic</th><th>Subject</th><th>Edit Content</th></tr></thead>
+            <tbody id="contentTopicsTable"><tr class="empty-row"><td colspan="3">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- USERS PANEL -->
+      <div class="panel" id="panel-users">
+        <div class="sec-head">
+          <div class="sec-title">👥 USER MANAGEMENT</div>
+          <input type="text" id="userSearch" placeholder="Search users..." oninput="filterUsersTable()" style="padding:9px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;width:220px;">
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="usersTable"><tr class="empty-row"><td colspan="5">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="panel" id="panel-settings">
+        <div class="sec-head"><div class="sec-title">⚙️ SETTINGS</div></div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;max-width:560px;">
+          <div class="section-label">Firebase Configuration</div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px;">
+            To connect this admin panel to your Firebase project:<br>
+            1. Open both <strong style="color:var(--accent)">user_panel.html</strong> and <strong style="color:var(--accent)">admin_panel.html</strong><br>
+            2. Replace <code style="background:rgba(0,0,0,0.4);padding:2px 6px;border-radius:4px;color:var(--accent3)">YOUR_API_KEY</code> and other placeholders with your Firebase config<br>
+            3. In Firebase Console → Authentication → Enable Email/Password & Google sign-in<br>
+            4. In Firestore → Create collections: <code style="background:rgba(0,0,0,0.4);padding:2px 6px;border-radius:4px;color:var(--accent3)">topics</code>, <code style="background:rgba(0,0,0,0.4);padding:2px 6px;border-radius:4px;color:var(--accent3)">users</code><br>
+            5. Set <code style="background:rgba(0,0,0,0.4);padding:2px 6px;border-radius:4px;color:var(--accent3)">window.ADMIN_EMAIL</code> to your admin email in admin_panel.html
+          </p>
+          <div class="section-label">Firestore Rules</div>
+          <pre style="background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:12px;color:#94a3b8;overflow-x:auto;line-height:1.6;">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /topics/{topicId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null 
+        && request.auth.token.email == "YOUR_ADMIN_EMAIL";
+    }
+    match /users/{userId} {
+      allow read, write: if request.auth != null 
+        && request.auth.uid == userId;
+      allow read, write: if request.auth != null 
+        && request.auth.token.email == "YOUR_ADMIN_EMAIL";
+    }
+  }
+}</pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- TOPIC MODAL -->
+<div class="modal-overlay" id="topicModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="topicModalTitle">ADD TOPIC</h3>
+      <button class="modal-close" onclick="closeTopicModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Topic Name *</label><input type="text" id="tName" placeholder="e.g. Mechanics"></div>
+        <div class="form-group"><label>Subject *</label>
+          <select id="tSubject">
+            <option value="Physics">Physics</option>
+            <option value="Mathematics">Mathematics</option>
+            <option value="Chemistry">Chemistry</option>
+            <option value="Biology">Biology</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Icon (emoji)</label><input type="text" id="tIcon" placeholder="⚙️" maxlength="4"></div>
+        <div class="form-group"><label>Short Description</label><input type="text" id="tDesc" placeholder="Brief description..."></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeTopicModal()">Cancel</button>
+      <button class="btn-save" onclick="saveTopic()">SAVE TOPIC</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTENT EDIT MODAL -->
+<div class="modal-overlay" id="contentModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="contentModalTitle">EDIT CONTENT</h3>
+      <button class="modal-close" onclick="closeContentModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- DEFINITIONS -->
+      <div class="section-label">📖 Definitions</div>
+      <div class="dyn-list" id="defsList"></div>
+      <button class="add-row-btn" onclick="addDef()">＋ Add Definition</button>
+
+      <!-- FORMULAS -->
+      <div class="section-label">📐 Formulas</div>
+      <div class="dyn-list" id="formulasList"></div>
+      <button class="add-row-btn" onclick="addFormula()">＋ Add Formula</button>
+
+      <!-- UNITS -->
+      <div class="section-label">📏 Units</div>
+      <div class="dyn-list" id="unitsList"></div>
+      <button class="add-row-btn" onclick="addUnit()">＋ Add Unit</button>
+
+      <!-- SYMBOLS -->
+      <div class="section-label">🔣 Symbols</div>
+      <div class="dyn-list" id="symbolsList"></div>
+      <button class="add-row-btn" onclick="addSymbol()">＋ Add Symbol</button>
+
+      <!-- NUMERICALS -->
+      <div class="section-label">🔢 Numerical Problems</div>
+      <div class="dyn-list" id="numericalsList"></div>
+      <button class="add-row-btn" onclick="addNumerical()">＋ Add Numerical Problem</button>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeContentModal()">Cancel</button>
+      <button class="btn-save" onclick="saveContent()">SAVE ALL CONTENT</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== STATE =====
+let allTopics=[];
+let allUsers=[];
+let editTopicId=null;
+let editContentId=null;
+
+// ===== LOGIN =====
+document.addEventListener('fb-ready',()=>{
+  const {onAuthStateChanged}=window.__fns;
+  onAuthStateChanged(window.__auth,user=>{
+    if(user&&user.email===window.ADMIN_EMAIL){
+      showAdmin(user);
+    } else if(user){
+      window.__fns.signOut(window.__auth);
+      showErr('Access denied. Not an admin account.');
+    }
+  });
+});
+
+async function doLogin(){
+  if(!window.__fbReady){showErr('Firebase not configured. Please add your config.');return;}
+  const email=document.getElementById('adminEmail').value.trim();
+  const pass=document.getElementById('adminPass').value;
+  if(!email||!pass){showErr('Please enter email and password.');return;}
+  const btn=document.querySelector('.btn-login');
+  btn.disabled=true;btn.textContent='Verifying...';
+  try{
+    const {signInWithEmailAndPassword}=window.__fns;
+    const cred=await signInWithEmailAndPassword(window.__auth,email,pass);
+    if(cred.user.email!==window.ADMIN_EMAIL){
+      window.__fns.signOut(window.__auth);
+      showErr('Access denied. Admin only.');
+      btn.disabled=false;btn.textContent='ACCESS PANEL →';
+      return;
+    }
+    showAdmin(cred.user);
+  }catch(e){
+    const map={'auth/user-not-found':'No admin account found.','auth/wrong-password':'Incorrect password.','auth/too-many-requests':'Too many attempts.'};
+    showErr(map[e.code]||'Login failed. Check credentials.');
+  }
+  btn.disabled=false;btn.textContent='ACCESS PANEL →';
+}
+
+function showErr(msg){
+  const el=document.getElementById('loginErr');
+  el.textContent=msg;el.style.display='block';
+}
+
+function showAdmin(user){
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('adminPage').classList.add('show');
+  document.getElementById('adminName').textContent=user.email.split('@')[0];
+  loadAll();
+}
+
+async function doLogout(){
+  await window.__fns.signOut(window.__auth);
+  location.reload();
+}
+
+// ===== LOAD ALL =====
+async function loadAll(){
+  await Promise.all([loadTopics(),loadUsers()]);
+  updateOverview();
+}
+
+async function loadTopics(){
+  const {collection,getDocs}=window.__fns;
+  try{
+    const snap=await getDocs(collection(window.__db,'topics'));
+    allTopics=[];
+    snap.forEach(d=>allTopics.push({id:d.id,...d.data()}));
+  }catch(e){allTopics=[];}
+  loadTopicsTable();
+  loadContentTopicsTable();
+  document.getElementById('ov-topics').textContent=allTopics.length;
+}
+
+async function loadUsers(){
+  const {collection,getDocs}=window.__fns;
+  try{
+    const snap=await getDocs(collection(window.__db,'users'));
+    allUsers=[];
+    snap.forEach(d=>allUsers.push({id:d.id,...d.data()}));
+  }catch(e){allUsers=[];}
+  loadUsersTable(allUsers);
+  loadRecentUsers();
+}
+
+function updateOverview(){
+  document.getElementById('ov-users').textContent=allUsers.length;
+  const blocked=allUsers.filter(u=>u.blocked).length;
+  const active=allUsers.length-blocked;
+  document.getElementById('ov-active').textContent=active;
+  document.getElementById('ov-blocked').textContent=blocked;
+}
+
+function loadRecentUsers(){
+  const tbody=document.getElementById('recentUsersTable');
+  const recent=[...allUsers].sort((a,b)=>new Date(b.joinedAt)-new Date(a.joinedAt)).slice(0,8);
+  if(!recent.length){tbody.innerHTML='<tr class="empty-row"><td colspan="4">No users yet.</td></tr>';return;}
+  tbody.innerHTML=recent.map(u=>`
+    <tr>
+      <td>${u.name||'—'}</td>
+      <td style="color:var(--muted);font-size:13px">${u.email||'—'}</td>
+      <td style="color:var(--muted);font-size:12px">${u.joinedAt?new Date(u.joinedAt).toLocaleDateString():'—'}</td>
+      <td><span class="badge ${u.blocked?'blocked':'active'}">${u.blocked?'Blocked':'Active'}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ===== PANELS =====
+function showPanel(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  if(el)el.classList.add('active');
+  const titles={overview:'OVERVIEW',topics:'MANAGE TOPICS',content:'TOPIC CONTENT',users:'USER MANAGEMENT',settings:'SETTINGS'};
+  document.getElementById('topbarTitle').textContent=titles[id]||id.toUpperCase();
+}
+
+// ===== TOPICS TABLE =====
+function loadTopicsTable(){
+  const subj=document.getElementById('topicSubjFilter')?.value||'all';
+  const list=subj==='all'?allTopics:allTopics.filter(t=>t.subject===subj);
+  const tbody=document.getElementById('topicsTable');
+  if(!list.length){tbody.innerHTML='<tr class="empty-row"><td colspan="8">No topics found. Click "Add Topic" to get started.</td></tr>';return;}
+  tbody.innerHTML=list.map(t=>`
+    <tr>
+      <td style="font-size:22px">${t.icon||'📚'}</td>
+      <td style="font-weight:600">${t.name}</td>
+      <td><span class="badge ${t.subject==='Physics'?'physics':'math'}">${t.subject||'—'}</span></td>
+      <td>${(t.definitions||[]).length}</td>
+      <td>${(t.formulas||[]).length}</td>
+      <td>${(t.units||[]).length}</td>
+      <td>${(t.numericals||[]).length}</td>
+      <td>
+        <button class="btn-sm edit" onclick="openTopicModal('${t.id}')">✏️ Edit</button>
+        <button class="btn-sm del" onclick="deleteTopic('${t.id}','${t.name}')" style="margin-left:6px">🗑️ Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function loadContentTopicsTable(){
+  const tbody=document.getElementById('contentTopicsTable');
+  if(!allTopics.length){tbody.innerHTML='<tr class="empty-row"><td colspan="3">No topics yet.</td></tr>';return;}
+  tbody.innerHTML=allTopics.map(t=>`
+    <tr>
+      <td>${t.icon||'📚'} <strong>${t.name}</strong></td>
+      <td><span class="badge ${t.subject==='Physics'?'physics':'math'}">${t.subject||'—'}</span></td>
+      <td><button class="btn-sm edit" onclick="openContentModal('${t.id}')">✏️ Edit Content</button></td>
+    </tr>
+  `).join('');
+}
+
+// ===== TOPIC MODAL =====
+function openTopicModal(id){
+  editTopicId=id||null;
+  const topic=id?allTopics.find(t=>t.id===id):null;
+  document.getElementById('topicModalTitle').textContent=id?'EDIT TOPIC':'ADD TOPIC';
+  document.getElementById('tName').value=topic?.name||'';
+  document.getElementById('tSubject').value=topic?.subject||'Physics';
+  document.getElementById('tIcon').value=topic?.icon||'';
+  document.getElementById('tDesc').value=topic?.desc||'';
+  document.getElementById('topicModal').classList.add('open');
+}
+
+function closeTopicModal(){document.getElementById('topicModal').classList.remove('open');editTopicId=null;}
+
+async function saveTopic(){
+  const name=document.getElementById('tName').value.trim();
+  const subject=document.getElementById('tSubject').value;
+  const icon=document.getElementById('tIcon').value.trim()||'📚';
+  const desc=document.getElementById('tDesc').value.trim();
+  if(!name){showToast('error','Topic name is required!');return;}
+  const {doc,setDoc,addDoc,collection,updateDoc}=window.__fns;
+  const db=window.__db;
+  try{
+    if(editTopicId){
+      const existing=allTopics.find(t=>t.id===editTopicId);
+      await updateDoc(doc(db,'topics',editTopicId),{name,subject,icon,desc});
+      const idx=allTopics.findIndex(t=>t.id===editTopicId);
+      allTopics[idx]={...allTopics[idx],name,subject,icon,desc};
+      showToast('success','Topic updated!');
+    } else {
+      const topicId=name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+      const data={name,subject,icon,desc,definitions:[],formulas:[],units:[],symbols:[],numericals:[],createdAt:new Date().toISOString()};
+      await setDoc(doc(db,'topics',topicId),data);
+      allTopics.push({id:topicId,...data});
+      showToast('success','Topic added!');
+    }
+    closeTopicModal();
+    loadTopicsTable();
+    loadContentTopicsTable();
+    document.getElementById('ov-topics').textContent=allTopics.length;
+  }catch(e){showToast('error','Error: '+e.message);}
+}
+
+async function deleteTopic(id,name){
+  if(!confirm(`Delete topic "${name}"? This cannot be undone.`))return;
+  const {doc,deleteDoc}=window.__fns;
+  try{
+    await deleteDoc(doc(window.__db,'topics',id));
+    allTopics=allTopics.filter(t=>t.id!==id);
+    loadTopicsTable();
+    loadContentTopicsTable();
+    document.getElementById('ov-topics').textContent=allTopics.length;
+    showToast('success','Topic deleted.');
+  }catch(e){showToast('error','Error: '+e.message);}
+}
+
+// ===== CONTENT MODAL =====
+function openContentModal(id){
+  editContentId=id;
+  const topic=allTopics.find(t=>t.id===id);
+  if(!topic)return;
+  document.getElementById('contentModalTitle').textContent=`✏️ ${topic.name}`;
+  renderDefs(topic.definitions||[]);
+  renderFormulas(topic.formulas||[]);
+  renderUnits(topic.units||[]);
+  renderSymbols(topic.symbols||[]);
+  renderNumericals(topic.numericals||[]);
+  document.getElementById('contentModal').classList.add('open');
+}
+
+function closeContentModal(){document.getElementById('contentModal').classList.remove('open');editContentId=null;}
+
+// Definitions
+function renderDefs(list){
+  const el=document.getElementById('defsList');
+  el.innerHTML='';
+  list.forEach((_,i)=>el.appendChild(makeDefRow(list[i],i)));
+}
+function makeDefRow(d,i){
+  const div=document.createElement('div');div.className='dyn-item';div.style.flexDirection='column';div.style.gap='6px';
+  div.innerHTML=`
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" placeholder="Title / Term" value="${escHtml(d?.title||'')}" class="def-title-inp">
+      <button class="rm-btn" onclick="this.closest('.dyn-item').remove()">✕</button>
+    </div>
+    <textarea placeholder="Full definition text..." class="def-text-inp">${escHtml(d?.text||'')}</textarea>`;
+  return div;
+}
+function addDef(){const el=document.getElementById('defsList');el.appendChild(makeDefRow({},el.children.length));}
+function getDefs(){
+  return [...document.querySelectorAll('#defsList .dyn-item')].map(d=>({
+    title:d.querySelector('.def-title-inp')?.value||'',
+    text:d.querySelector('.def-text-inp')?.value||''
+  })).filter(d=>d.title||d.text);
+}
+
+// Formulas
+function renderFormulas(list){
+  const el=document.getElementById('formulasList');el.innerHTML='';
+  list.forEach(f=>el.appendChild(makeFormulaRow(f)));
+}
+function makeFormulaRow(f){
+  const div=document.createElement('div');div.className='dyn-item';div.style.flexDirection='column';div.style.gap='6px';
+  div.innerHTML=`
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" placeholder="Formula name" value="${escHtml(f?.name||'')}" class="f-name">
+      <button class="rm-btn" onclick="this.closest('.dyn-item').remove()">✕</button>
+    </div>
+    <input type="text" placeholder="Equation (e.g. F = ma)" value="${escHtml(f?.eq||'')}" class="f-eq">
+    <input type="text" placeholder="Variable descriptions..." value="${escHtml(f?.desc||'')}" class="f-desc">`;
+  return div;
+}
+function addFormula(){const el=document.getElementById('formulasList');el.appendChild(makeFormulaRow({}));}
+function getFormulas(){
+  return [...document.querySelectorAll('#formulasList .dyn-item')].map(d=>({
+    name:d.querySelector('.f-name')?.value||'',
+    eq:d.querySelector('.f-eq')?.value||'',
+    desc:d.querySelector('.f-desc')?.value||''
+  })).filter(f=>f.name||f.eq);
+}
+
+// Units
+function renderUnits(list){
+  const el=document.getElementById('unitsList');el.innerHTML='';
+  list.forEach(u=>el.appendChild(makeUnitRow(u)));
+}
+function makeUnitRow(u){
+  const div=document.createElement('div');div.className='dyn-item';
+  div.innerHTML=`
+    <input type="text" placeholder="Quantity name (e.g. Force)" value="${escHtml(u?.name||'')}" class="u-name">
+    <input type="text" placeholder="Symbol (e.g. Newton (N))" value="${escHtml(u?.sym||'')}" class="u-sym">
+    <input type="text" placeholder="Unit description" value="${escHtml(u?.unit||'')}" class="u-unit">
+    <button class="rm-btn" onclick="this.closest('.dyn-item').remove()">✕</button>`;
+  return div;
+}
+function addUnit(){const el=document.getElementById('unitsList');el.appendChild(makeUnitRow({}));}
+function getUnits(){
+  return [...document.querySelectorAll('#unitsList .dyn-item')].map(d=>({
+    name:d.querySelector('.u-name')?.value||'',
+    sym:d.querySelector('.u-sym')?.value||'',
+    unit:d.querySelector('.u-unit')?.value||''
+  })).filter(u=>u.name||u.sym);
+}
+
+// Symbols
+function renderSymbols(list){
+  const el=document.getElementById('symbolsList');el.innerHTML='';
+  list.forEach(s=>el.appendChild(makeSymbolRow(s)));
+}
+function makeSymbolRow(s){
+  const div=document.createElement('div');div.className='dyn-item';
+  div.innerHTML=`
+    <input type="text" placeholder="Name (e.g. Force)" value="${escHtml(s?.name||'')}" class="s-name">
+    <input type="text" placeholder="Symbol (e.g. F)" value="${escHtml(s?.sym||'')}" class="s-sym" style="max-width:80px">
+    <button class="rm-btn" onclick="this.closest('.dyn-item').remove()">✕</button>`;
+  return div;
+}
+function addSymbol(){const el=document.getElementById('symbolsList');el.appendChild(makeSymbolRow({}));}
+function getSymbols(){
+  return [...document.querySelectorAll('#symbolsList .dyn-item')].map(d=>({
+    name:d.querySelector('.s-name')?.value||'',
+    sym:d.querySelector('.s-sym')?.value||''
+  })).filter(s=>s.name||s.sym);
+}
+
+// Numericals
+function renderNumericals(list){
+  const el=document.getElementById('numericalsList');el.innerHTML='';
+  list.forEach(n=>el.appendChild(makeNumericalRow(n)));
+}
+function makeNumericalRow(n){
+  const div=document.createElement('div');div.className='dyn-item';div.style.flexDirection='column';div.style.gap='6px';
+  div.innerHTML=`
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <textarea placeholder="Question / Problem statement..." class="n-q" style="min-height:60px">${escHtml(n?.q||'')}</textarea>
+      <button class="rm-btn" onclick="this.closest('.dyn-item').remove()">✕</button>
+    </div>
+    <textarea placeholder="Solution / Answer (step by step)..." class="n-sol" style="min-height:80px">${escHtml(n?.sol||'')}</textarea>`;
+  return div;
+}
+function addNumerical(){const el=document.getElementById('numericalsList');el.appendChild(makeNumericalRow({}));}
+function getNumericals(){
+  return [...document.querySelectorAll('#numericalsList .dyn-item')].map(d=>({
+    q:d.querySelector('.n-q')?.value||'',
+    sol:d.querySelector('.n-sol')?.value||''
+  })).filter(n=>n.q||n.sol);
+}
+
+async function saveContent(){
+  if(!editContentId)return;
+  const {doc,updateDoc}=window.__fns;
+  const data={
+    definitions:getDefs(),
+    formulas:getFormulas(),
+    units:getUnits(),
+    symbols:getSymbols(),
+    numericals:getNumericals()
+  };
+  try{
+    await updateDoc(doc(window.__db,'topics',editContentId),data);
+    const idx=allTopics.findIndex(t=>t.id===editContentId);
+    if(idx>-1)allTopics[idx]={...allTopics[idx],...data};
+    closeContentModal();
+    loadTopicsTable();
+    showToast('success','Content saved successfully!');
+  }catch(e){showToast('error','Error: '+e.message);}
+}
+
+// ===== USERS TABLE =====
+function loadUsersTable(users){
+  const tbody=document.getElementById('usersTable');
+  if(!users||!users.length){tbody.innerHTML='<tr class="empty-row"><td colspan="5">No users found.</td></tr>';return;}
+  tbody.innerHTML=users.map(u=>`
+    <tr>
+      <td style="font-weight:600">${u.name||'—'}</td>
+      <td style="color:var(--muted);font-size:13px">${u.email||'—'}</td>
+      <td style="color:var(--muted);font-size:12px">${u.joinedAt?new Date(u.joinedAt).toLocaleDateString():'—'}</td>
+      <td><span class="badge ${u.blocked?'blocked':'active'}">${u.blocked?'Blocked':'Active'}</span></td>
+      <td>
+        <button class="btn-sm ${u.blocked?'unblock':'block'}" onclick="toggleBlock('${u.id}',${!u.blocked})">${u.blocked?'✅ Unblock':'🚫 Block'}</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterUsersTable(){
+  const q=document.getElementById('userSearch').value.toLowerCase();
+  const filtered=allUsers.filter(u=>(u.name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q));
+  loadUsersTable(filtered);
+}
+
+async function toggleBlock(uid,block){
+  const {doc,updateDoc}=window.__fns;
+  try{
+    await updateDoc(doc(window.__db,'users',uid),{blocked:block});
+    const idx=allUsers.findIndex(u=>u.id===uid);
+    if(idx>-1)allUsers[idx].blocked=block;
+    filterUsersTable();
+    updateOverview();
+    loadRecentUsers();
+    showToast('success',block?'User blocked.':'User unblocked.');
+  }catch(e){showToast('error','Error: '+e.message);}
+}
+
+// ===== UTILS =====
+function escHtml(str){return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+let toastTimer=null;
+function showToast(type,msg){
+  const el=document.getElementById('toast');
+  el.className='toast show '+type;
+  el.textContent=(type==='success'?'✅ ':type==='error'?'❌ ':'ℹ️ ')+msg;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+// Close modals on overlay click
+document.getElementById('topicModal').addEventListener('click',function(e){if(e.target===this)closeTopicModal();});
+document.getElementById('contentModal').addEventListener('click',function(e){if(e.target===this)closeContentModal();});
+</script>
+</body>
+</html>
